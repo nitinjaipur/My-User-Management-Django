@@ -1,0 +1,62 @@
+# Python bytecode files
+*.py[cod]
+__pycache__/
+
+# Django settings
+*.log
+*.pot
+*.pyc
+
+# Django migrations
+*/migrations/*
+!/yourapp/migrations/__init__.py
+
+# Django database files
+*.sqlite3
+
+# Django secret key
+secret_key.txt
+
+# Virtual environment
+env/
+venv/
+.venv/
+
+# VSCode settings
+.vscode/
+
+# PyCharm settings
+.idea/
+
+# macOS system files
+.DS_Store
+
+# Windows system files
+Thumbs.db
+
+# Python distribution package
+*.egg
+*.egg-info
+dist/
+build/
+.eggs/
+
+# Coverage directory
+.coverage
+
+# test and lint coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage.*
+*.coveragerc
+.coverage/
+
+# pyenv
+.python-version
+
+# Pycharm project files
+.idea/
+
+# Static files directories
+/static/
