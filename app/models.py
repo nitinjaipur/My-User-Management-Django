@@ -5,7 +5,15 @@ GENDER_CHOICE = {
     'FEMALE': 'female'
 }
 
-# Create your models here.
+# Model for Blocked jwt token
+class BlockedToken(models.Model):
+    value = models.TextField()
+    expire_time = models.DateTimeField()
+    def __str__(self):
+        return self.value
+
+
+# Model for AppUser
 class AppUser(models.Model):
     name = models.CharField(max_length=100)
     email = models.EmailField(max_length=100, unique=True)
@@ -17,6 +25,5 @@ class AppUser(models.Model):
         default='MALE'
     )
     profileImg = models.ImageField(upload_to='user_profile_img/', null=True, blank=True)
-
     def __str__(self):
         return self.name

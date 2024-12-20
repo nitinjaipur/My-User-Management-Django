@@ -128,3 +128,5 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 APPEND_SLASH = False
+
+JWT_SECRET_KEY = 'your-secret-key-here'
