@@ -1,10 +1,8 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.hashers import make_password
+from django.contrib.auth.hashers import make_password, check_password
 import json
 from .models import AppUser
-
-# Create your views here.
 
 # View for User Register
 @csrf_exempt
@@ -30,7 +28,7 @@ def register(request):
         # If data is complete than doing further process
         else:
             try:
-                #Hashing password before saving to database
+                # Hashing password before saving to database
                 password = make_password(password)
                 # Creating AppUser object using data recieved in api
                 user = AppUser.objects.create(name=name, email=email, password=password, age=age, gender=gender, profileImg=image)
@@ -69,24 +67,60 @@ def register(request):
 
 
 
+# View for User Login
 @csrf_exempt
 def login(request):
+    # For POST method
     if request.method == 'POST':
-        email = request.POST.get('email')
-        password = request.POST.get('password')
+        # Extracting data from json data in POST api
+        data = request.body
+        data = json.loads(data)
+        email = data.get('email')
+        password = data.get('password')
 
+        # If data do not have email and password than return error with code 400
         if not email or not password:
             response = {
                 'status_code': 400,
                 'message': 'Bad Request [email and password are required]'
             }
         
+        # If data is complete than doing further process
         else:
-            pass
+            # Query database to find AppUser for same email
+            user = AppUser.objects.get(email=email)
+            # If user not exist than returning response
+            if not user:
+                response = {
+                    'status_code': 404,
+                    'message': 'User not found'
+                }
+            # If user found than doing further process
+            else:
+                # If user password (after unhashing) and api password matches
+                if check_password(password, user.password):
+                    response = {
+                        'status_code': 200,
+                        'message': 'User found Successfully',
+                        'data': {
+                            'user_id': user.id
+                        }
+                    }
+                # If user password and hashed api password not matches
+                else:
+                    response = {
+                        'status_code': 401,
+                        'message': 'Unauthorized'
+                    }
 
-
-        pass
-
-
+    # If method is not POST than returning error
     else:
-        pass
+        response = {
+            'status_code': 405,
+            'message': 'Method Not Allowed'
+        }
+    
+    # Creating json from response
+    response = json.dumps(response)
+    # Returning JsonResponse
+    return JsonResponse(response, safe=False)
