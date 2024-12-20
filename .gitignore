@@ -60,3 +60,5 @@ htmlcov/
 
 # Static files directories
 /static/
+
+media/
