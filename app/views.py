@@ -8,6 +8,8 @@ import jwt
 import datetime
 from django.conf import settings
 from .decorators import jwt_required
+import base64
+import os
 
 # View for User Register
 @csrf_exempt
@@ -191,4 +193,40 @@ def logout(request):
             'message': 'Method Not Allowed'
         }
     # Returning JsonResponse
+    return JsonResponse(response, status=status, safe=False)
+
+
+@csrf_exempt
+@jwt_required
+def get_user_details(request):
+    # Extracting user from request (setted by jwt_required decorator)
+    user = request.user
+    # Query to get App user from database
+    user = AppUser.objects.filter(id=user['user_id']).first()
+
+    if user:
+        status = 200
+        response = {
+            'name': user.name,
+            'email': user.email,
+            'age': user.age,
+            'gender': user.gender
+        }
+
+        if user.profileImg:
+            # Converting image to base64 so can be sent in json response
+            image_path = user.profileImg.path
+            with open(image_path, 'rb') as img_file:
+                # Encode the image to base64
+                image_data = base64.b64encode(img_file.read()).decode('utf-8')
+                # Add the image data to the user data dictionary
+                response['image_data'] = image_data
+    
+    else:
+        status = 404
+        response = {
+            'status_code': 404,
+            'message': 'User not found'
+        }
+
     return JsonResponse(response, status=status, safe=False)
