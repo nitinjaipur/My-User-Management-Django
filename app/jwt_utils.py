@@ -6,8 +6,8 @@ def generate_jwt_token(user):
     payload = {
         'user_id': user.id,
         'email': user.email,
-        'exp': datetime.datetime.now() + datetime.timedelta(minutes=10),  # Token expires in 10 minutes
-        'iat': datetime.datetime.now()  # Issued at time
+        'exp': (datetime.datetime.utcnow() + datetime.timedelta(days=1)).timestamp(),  # Token expires in 1 day
+        'iat': datetime.datetime.utcnow().timestamp()  # Issued at time
     }
     
     # Secret key should be stored in your settings

@@ -1,6 +1,7 @@
 import jwt
 from django.conf import settings
 from django.http import JsonResponse
+from .models import BlockedToken
 
 # Decorator to check JWT token validity without using functools.wraps
 def jwt_required(view_func):
@@ -24,6 +25,14 @@ def jwt_required(view_func):
             }, status=400)
 
         token = parts[1]
+
+        # Looking into database if token is saved in BlockedToken token
+        token_inBlocked = list(BlockedToken.objects.filter(value=token))
+        if(len(token_inBlocked) != 0):
+            return JsonResponse({
+                'status_code': 401,
+                'message': 'Unauthorized [Token has expired]'
+            }, status=401)
 
         try:
             # Decode the JWT token to get the payload

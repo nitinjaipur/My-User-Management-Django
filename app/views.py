@@ -7,6 +7,7 @@ from .jwt_utils import generate_jwt_token, decode_jwt_token
 import jwt
 import datetime
 from django.conf import settings
+from .decorators import jwt_required
 
 # View for User Register
 @csrf_exempt
@@ -24,6 +25,7 @@ def register(request):
         # If data do not have email and password than return error with code 400
         if not email or not password:
             # Crating response
+            status = 400
             response = {
                 'status_code': 400,
                 'message': 'Bad Request [email and password are required]'
@@ -43,6 +45,7 @@ def register(request):
                 token = generate_jwt_token(user)
 
                 # Crating response
+                status = 201
                 response = {
                     'status_code': 201,
                     'message': 'User Created',
@@ -52,6 +55,7 @@ def register(request):
             #In case of any exception happened handling it
             except Exception as e:
                 # Crating response
+                status = 400
                 response = {
                     'status_code': 400,
                     'message': f'Bad Request [{e}]'
@@ -60,15 +64,14 @@ def register(request):
     # If method is not POST than returning error
     else:
         # Crating response
+        status = 404
         response = {
             'status_code': 405,
             'message': 'Method Not Allowed'
         }
     
-    # Creating json from response
-    response = json.dumps(response)
     # Returning JsonResponse
-    return JsonResponse(response, safe=False)
+    return JsonResponse(response, status=status, safe=False)
 
 
 # View for User Login
@@ -84,6 +87,7 @@ def login(request):
 
         # If data do not have email and password than return error with code 400
         if not email or not password:
+            status = 400
             response = {
                 'status_code': 400,
                 'message': 'Bad Request [email and password are required]'
@@ -95,6 +99,7 @@ def login(request):
             user = AppUser.objects.get(email=email)
             # If user not exist than returning response
             if not user:
+                status = 404
                 response = {
                     'status_code': 404,
                     'message': 'User not found'
@@ -105,6 +110,7 @@ def login(request):
                 if check_password(password, user.password):
                     # Generating jwt token
                     token = generate_jwt_token(user)
+                    status = 200
                     response = {
                         'status_code': 200,
                         'message': 'User found Successfully',
@@ -112,6 +118,7 @@ def login(request):
                     }
                 # If user password and hashed api password not matches
                 else:
+                    status = 401
                     response = {
                         'status_code': 401,
                         'message': 'Unauthorized'
@@ -119,19 +126,19 @@ def login(request):
 
     # If method is not POST than returning error
     else:
+        status = 405
         response = {
             'status_code': 405,
             'message': 'Method Not Allowed'
         }
     
-    # Creating json from response
-    response = json.dumps(response)
     # Returning JsonResponse
-    return JsonResponse(response, safe=False)
+    return JsonResponse(response, status=status, safe=False)
 
 
 # View for User Logout
 @csrf_exempt
+@jwt_required
 def logout(request):
     if request.method == 'POST':
         # Extract the JWT token from the Authorization header
@@ -142,6 +149,7 @@ def logout(request):
 
         # If it do not have have token and bearer
         if len(token) != 2 or token[0].lower() != 'bearer':
+            status = 400
             response = {
                 'status_code': 400,
                 'message': 'Bad Request [Authorization token must be in the form "Bearer <token>"]'
@@ -149,24 +157,27 @@ def logout(request):
         # If it do not have have token and bearer
         else:
             token = token[1]
-            expire_time = datetime.datetime.now()
+            expire_time = datetime.datetime.utcnow().timestamp()
+            expire_time = datetime.datetime.utcfromtimestamp(expire_time)
             try:
-                payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=['HS256'])
                 blockedToken = BlockedToken.objects.create(value=token, expire_time=expire_time)
                 blockedToken.save()
 
+                status = 200
                 response = {
                     'status_code': 200,
                     'message': 'Logout successfull'
                 }
             # Exception if token expired
             except jwt.ExpiredSignatureError:
+                status = 401
                 response = {
                     'status_code': 401,
                     'message': 'Unauthorized [Token has expired]'
                 }
             # Exception if token invalid
             except jwt.InvalidTokenError:
+                status = 401
                 response = {
                     'status_code': 401,
                     'message': 'Unauthorized [Invalid token]'
@@ -174,11 +185,10 @@ def logout(request):
 
     # If method is not POST than returning error
     else:
+        status = 405
         response = {
             'status_code': 405,
             'message': 'Method Not Allowed'
         }
-    # Creating json from response
-    response = json.dumps(response)
     # Returning JsonResponse
-    return JsonResponse(response, safe=False)
+    return JsonResponse(response, status=status, safe=False)
