@@ -9,7 +9,6 @@ import datetime
 from django.conf import settings
 from .decorators import jwt_required
 import base64
-import os
 
 # View for User Register
 @csrf_exempt
@@ -170,47 +169,42 @@ def login(request):
 @jwt_required
 def logout(request):
     if request.method == 'POST':
-        # Extract the JWT token from the Authorization header
-        auth_header = request.headers.get('Authorization')
-
-        # Splitting auth_header
-        token = auth_header.split(' ')
+        # Extract the JWT token from HttpOnly cookie
+        token = request.COOKIES.get('jwt_token')
 
         # If it do not have have token and bearer
-        if len(token) != 2 or token[0].lower() != 'bearer':
+        if not token:
             status = 400
             response = {
                 'status_code': 400,
-                'message': 'Bad Request [Authorization token must be in the form "Bearer <token>"]'
+                'message': 'Bad Request [Authorization token in HttpOnly cookie is required]'
             }
         # If it do not have have token and bearer
-        else:
-            token = token[1]
-            expire_time = datetime.datetime.utcnow().timestamp()
-            expire_time = datetime.datetime.utcfromtimestamp(expire_time)
-            try:
-                blockedToken = BlockedToken.objects.create(value=token, expire_time=expire_time)
-                blockedToken.save()
+        expire_time = datetime.datetime.utcnow().timestamp()
+        expire_time = datetime.datetime.utcfromtimestamp(expire_time)
+        try:
+            blockedToken = BlockedToken.objects.create(value=token, expire_time=expire_time)
+            blockedToken.save()
 
-                status = 200
-                response = {
-                    'status_code': 200,
-                    'message': 'Logout successfull'
-                }
-            # Exception if token expired
-            except jwt.ExpiredSignatureError:
-                status = 401
-                response = {
-                    'status_code': 401,
-                    'message': 'Unauthorized [Token has expired]'
-                }
-            # Exception if token invalid
-            except jwt.InvalidTokenError:
-                status = 401
-                response = {
-                    'status_code': 401,
-                    'message': 'Unauthorized [Invalid token]'
-                }
+            status = 200
+            response = {
+                'status_code': 200,
+                'message': 'Logout successfull'
+            }
+        # Exception if token expired
+        except jwt.ExpiredSignatureError:
+            status = 401
+            response = {
+                'status_code': 401,
+                'message': 'Unauthorized [Token has expired]'
+            }
+        # Exception if token invalid
+        except jwt.InvalidTokenError:
+            status = 401
+            response = {
+                'status_code': 401,
+                'message': 'Unauthorized [Invalid token]'
+            }
 
     # If method is not POST than returning error
     else:
@@ -223,7 +217,8 @@ def logout(request):
     # return JsonResponse(response, status=status, safe=False)
     response = JsonResponse(response, status=status, safe=False)
     if status == 200:
-        response.delete_cookie('jwt_token', path='/', httponly=True, secure=True, samesite='Strict')
+        # response.delete_cookie('jwt_token', path='/', httponly=True, secure=True, samesite='Strict')
+        response.delete_cookie('jwt_token', path='/')
     return response
 
 
