@@ -73,7 +73,21 @@ def register(request):
         }
     
     # Returning JsonResponse
-    return JsonResponse(response, status=status, safe=False)
+    # return JsonResponse(response, status=status, safe=False)
+
+    response = JsonResponse(response, status=status, safe=False)
+    if status == 201:
+        expires = datetime.datetime.utcnow() + datetime.timedelta(days=1)  # Token expires in 1 day
+        response.set_cookie(
+            key='jwt_token',
+            value=token,
+            httponly=True,  # Ensures that the cookie is inaccessible to JavaScript
+            secure=True,    # Only send cookie over HTTPS (ensure your site uses HTTPS)
+            samesite='Strict',  # Prevent CSRF by limiting cross-site requests
+            expires=expires  # Set the expiration time
+        )
+    
+    return response
 
 
 # View for User Login
@@ -135,7 +149,20 @@ def login(request):
         }
     
     # Returning JsonResponse
-    return JsonResponse(response, status=status, safe=False)
+    # return JsonResponse(response, status=status, safe=False)
+    response = JsonResponse(response, status=status, safe=False)
+    if status == 200:
+        expires = datetime.datetime.utcnow() + datetime.timedelta(days=1)  # Token expires in 1 day
+        response.set_cookie(
+            key='jwt_token',
+            value=token,
+            httponly=True,  # Ensures that the cookie is inaccessible to JavaScript
+            secure=True,    # Only send cookie over HTTPS (ensure your site uses HTTPS)
+            samesite='Strict',  # Prevent CSRF by limiting cross-site requests
+            expires=expires  # Set the expiration time
+        )
+    
+    return response
 
 
 # View for User Logout
@@ -193,7 +220,11 @@ def logout(request):
             'message': 'Method Not Allowed'
         }
     # Returning JsonResponse
-    return JsonResponse(response, status=status, safe=False)
+    # return JsonResponse(response, status=status, safe=False)
+    response = JsonResponse(response, status=status, safe=False)
+    if status == 200:
+        response.delete_cookie('jwt_token', path='/', httponly=True, secure=True, samesite='Strict')
+    return response
 
 
 @csrf_exempt
