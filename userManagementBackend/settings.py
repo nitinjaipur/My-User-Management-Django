@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-j@d98=ua1mnyb!73v6(%4^)rai0pzrngc31ri#@ds*wnj15vyy
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '::1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '::1', 'http://127.0.0.1:3000/']
 
 
 # Application definition
@@ -135,7 +135,7 @@ JWT_SECRET_KEY = 'your-secret-key-here'
 
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',  # React development server
-    # Add other URLs as needed
+    'http://127.0.0.1:3000'
 ]
 
 CORS_ALLOW_CREDENTIALS = True

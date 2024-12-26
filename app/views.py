@@ -123,13 +123,25 @@ def login(request):
             else:
                 # If user password (after unhashing) and api password matches
                 if check_password(password, user.password):
-                    # Generating jwt token
+                    user_details = {
+                        'id': user.id,
+                        'name': user.name,
+                        'email': user.email,
+                        'age': user.age,
+                        'gender': user.gender
+                    }
+                    if user.profileImg:
+                        image_path = user.profileImg.path
+                        with open(image_path, 'rb') as img_file:
+                            image_data = base64.b64encode(img_file.read()).decode('utf-8')
+                            user_details['image_data'] = image_data
+
                     token = generate_jwt_token(user)
                     status = 200
                     response = {
                         'status_code': 200,
                         'message': 'User found Successfully',
-                        'token': token
+                        'data': user_details
                     }
                 # If user password and hashed api password not matches
                 else:
@@ -166,7 +178,6 @@ def login(request):
 
 # View for User Logout
 @csrf_exempt
-@jwt_required
 def logout(request):
     if request.method == 'POST':
         # Extract the JWT token from HttpOnly cookie
@@ -177,7 +188,7 @@ def logout(request):
             status = 400
             response = {
                 'status_code': 400,
-                'message': 'Bad Request [Authorization token in HttpOnly cookie is required]'
+                'message': 'Bad Request [No Authorization token in HttpOnly cookie]'
             }
         # If it do not have have token and bearer
         expire_time = datetime.datetime.utcnow().timestamp()
@@ -216,8 +227,7 @@ def logout(request):
     # Returning JsonResponse
     # return JsonResponse(response, status=status, safe=False)
     response = JsonResponse(response, status=status, safe=False)
-    if status == 200:
-        # response.delete_cookie('jwt_token', path='/', httponly=True, secure=True, samesite='Strict')
+    if status != 405:
         response.delete_cookie('jwt_token', path='/')
     return response
 
