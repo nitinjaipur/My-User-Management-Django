@@ -111,7 +111,7 @@ def login(request):
         # If data is complete than doing further process
         else:
             # Query database to find AppUser for same email
-            user = AppUser.objects.get(email=email)
+            user = AppUser.objects.filter(email=email).first()
             # If user not exist than returning response
             if not user:
                 status = 404
