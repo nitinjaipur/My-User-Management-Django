@@ -132,11 +132,15 @@ def login(request):
                         'gender': user.gender
                     }
                     if user.profileImg:
+                        # Getting image type from image path
                         profileImgType = (user.profileImg.path).split('.')[-1]
+                        # Getting mime type from image type
                         mime_type = IMG_TYPE.get(profileImgType)
                         image_path = user.profileImg.path
                         with open(image_path, 'rb') as img_file:
+                            # Encode the image to base64
                             image_data = base64.b64encode(img_file.read()).decode('utf-8')
+                            # Add the image data to the user data dictionary
                             user_details['image_data'] = f"data:{mime_type};base64,{image_data}"
 
                     token = generate_jwt_token(user)
@@ -253,13 +257,17 @@ def get_user_details(request):
         }
 
         if user.profileImg:
+            # Getting image type from image path
+            profileImgType = (user.profileImg.path).split('.')[-1]
+            # Getting mime type from image type
+            mime_type = IMG_TYPE.get(profileImgType)
             # Converting image to base64 so can be sent in json response
             image_path = user.profileImg.path
             with open(image_path, 'rb') as img_file:
                 # Encode the image to base64
                 image_data = base64.b64encode(img_file.read()).decode('utf-8')
                 # Add the image data to the user data dictionary
-                response['image_data'] = image_data
+                response['image_data'] = f"data:{mime_type};base64,{image_data}"
     
     else:
         status = 404
