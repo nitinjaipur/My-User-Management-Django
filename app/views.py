@@ -9,6 +9,7 @@ import datetime
 from django.conf import settings
 from .decorators import jwt_required
 import base64
+from .utils import IMG_TYPE
 
 # View for User Register
 @csrf_exempt
@@ -131,10 +132,12 @@ def login(request):
                         'gender': user.gender
                     }
                     if user.profileImg:
+                        profileImgType = (user.profileImg.path).split('.')[-1]
+                        mime_type = IMG_TYPE.get(profileImgType)
                         image_path = user.profileImg.path
                         with open(image_path, 'rb') as img_file:
                             image_data = base64.b64encode(img_file.read()).decode('utf-8')
-                            user_details['image_data'] = image_data
+                            user_details['image_data'] = f"data:{mime_type};base64,{image_data}"
 
                     token = generate_jwt_token(user)
                     status = 200
