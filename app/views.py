@@ -9,7 +9,7 @@ import datetime
 from django.conf import settings
 from .decorators import jwt_required
 import base64
-import os
+from .utils import IMG_TYPE
 
 # View for User Register
 @csrf_exempt
@@ -73,7 +73,21 @@ def register(request):
         }
     
     # Returning JsonResponse
-    return JsonResponse(response, status=status, safe=False)
+    # return JsonResponse(response, status=status, safe=False)
+
+    response = JsonResponse(response, status=status, safe=False)
+    if status == 201:
+        expires = datetime.datetime.utcnow() + datetime.timedelta(days=1)  # Token expires in 1 day
+        response.set_cookie(
+            key='jwt_token',
+            value=token,
+            httponly=True,  # Ensures that the cookie is inaccessible to JavaScript
+            secure=True,    # Only send cookie over HTTPS (ensure your site uses HTTPS)
+            samesite='Strict',  # Prevent CSRF by limiting cross-site requests
+            expires=expires  # Set the expiration time
+        )
+    
+    return response
 
 
 # View for User Login
@@ -98,7 +112,7 @@ def login(request):
         # If data is complete than doing further process
         else:
             # Query database to find AppUser for same email
-            user = AppUser.objects.get(email=email)
+            user = AppUser.objects.filter(email=email).first()
             # If user not exist than returning response
             if not user:
                 status = 404
@@ -110,13 +124,31 @@ def login(request):
             else:
                 # If user password (after unhashing) and api password matches
                 if check_password(password, user.password):
-                    # Generating jwt token
+                    user_details = {
+                        'id': user.id,
+                        'name': user.name,
+                        'email': user.email,
+                        'age': user.age,
+                        'gender': user.gender
+                    }
+                    if user.profileImg:
+                        # Getting image type from image path
+                        profileImgType = (user.profileImg.path).split('.')[-1]
+                        # Getting mime type from image type
+                        mime_type = IMG_TYPE.get(profileImgType)
+                        image_path = user.profileImg.path
+                        with open(image_path, 'rb') as img_file:
+                            # Encode the image to base64
+                            image_data = base64.b64encode(img_file.read()).decode('utf-8')
+                            # Add the image data to the user data dictionary
+                            user_details['image_data'] = f"data:{mime_type};base64,{image_data}"
+
                     token = generate_jwt_token(user)
                     status = 200
                     response = {
                         'status_code': 200,
                         'message': 'User found Successfully',
-                        'token': token
+                        'data': user_details
                     }
                 # If user password and hashed api password not matches
                 else:
@@ -135,55 +167,62 @@ def login(request):
         }
     
     # Returning JsonResponse
-    return JsonResponse(response, status=status, safe=False)
+    # return JsonResponse(response, status=status, safe=False)
+    response = JsonResponse(response, status=status, safe=False)
+    if status == 200:
+        expires = datetime.datetime.utcnow() + datetime.timedelta(days=1)  # Token expires in 1 day
+        response.set_cookie(
+            key='jwt_token',
+            value=token,
+            httponly=True,  # Ensures that the cookie is inaccessible to JavaScript
+            secure=True,    # Only send cookie over HTTPS (ensure your site uses HTTPS)
+            samesite='Strict',  # Prevent CSRF by limiting cross-site requests
+            expires=expires  # Set the expiration time
+        )
+    
+    return response
 
 
 # View for User Logout
 @csrf_exempt
-@jwt_required
 def logout(request):
     if request.method == 'POST':
-        # Extract the JWT token from the Authorization header
-        auth_header = request.headers.get('Authorization')
-
-        # Splitting auth_header
-        token = auth_header.split(' ')
+        # Extract the JWT token from HttpOnly cookie
+        token = request.COOKIES.get('jwt_token')
 
         # If it do not have have token and bearer
-        if len(token) != 2 or token[0].lower() != 'bearer':
+        if not token:
             status = 400
             response = {
                 'status_code': 400,
-                'message': 'Bad Request [Authorization token must be in the form "Bearer <token>"]'
+                'message': 'Bad Request [No Authorization token in HttpOnly cookie]'
             }
         # If it do not have have token and bearer
-        else:
-            token = token[1]
-            expire_time = datetime.datetime.utcnow().timestamp()
-            expire_time = datetime.datetime.utcfromtimestamp(expire_time)
-            try:
-                blockedToken = BlockedToken.objects.create(value=token, expire_time=expire_time)
-                blockedToken.save()
+        expire_time = datetime.datetime.utcnow().timestamp()
+        expire_time = datetime.datetime.utcfromtimestamp(expire_time)
+        try:
+            blockedToken = BlockedToken.objects.create(value=token, expire_time=expire_time)
+            blockedToken.save()
 
-                status = 200
-                response = {
-                    'status_code': 200,
-                    'message': 'Logout successfull'
-                }
-            # Exception if token expired
-            except jwt.ExpiredSignatureError:
-                status = 401
-                response = {
-                    'status_code': 401,
-                    'message': 'Unauthorized [Token has expired]'
-                }
-            # Exception if token invalid
-            except jwt.InvalidTokenError:
-                status = 401
-                response = {
-                    'status_code': 401,
-                    'message': 'Unauthorized [Invalid token]'
-                }
+            status = 200
+            response = {
+                'status_code': 200,
+                'message': 'Logout successfull'
+            }
+        # Exception if token expired
+        except jwt.ExpiredSignatureError:
+            status = 401
+            response = {
+                'status_code': 401,
+                'message': 'Unauthorized [Token has expired]'
+            }
+        # Exception if token invalid
+        except jwt.InvalidTokenError:
+            status = 401
+            response = {
+                'status_code': 401,
+                'message': 'Unauthorized [Invalid token]'
+            }
 
     # If method is not POST than returning error
     else:
@@ -193,7 +232,11 @@ def logout(request):
             'message': 'Method Not Allowed'
         }
     # Returning JsonResponse
-    return JsonResponse(response, status=status, safe=False)
+    # return JsonResponse(response, status=status, safe=False)
+    response = JsonResponse(response, status=status, safe=False)
+    if status != 405:
+        response.delete_cookie('jwt_token', path='/')
+    return response
 
 
 @csrf_exempt
@@ -214,13 +257,17 @@ def get_user_details(request):
         }
 
         if user.profileImg:
+            # Getting image type from image path
+            profileImgType = (user.profileImg.path).split('.')[-1]
+            # Getting mime type from image type
+            mime_type = IMG_TYPE.get(profileImgType)
             # Converting image to base64 so can be sent in json response
             image_path = user.profileImg.path
             with open(image_path, 'rb') as img_file:
                 # Encode the image to base64
                 image_data = base64.b64encode(img_file.read()).decode('utf-8')
                 # Add the image data to the user data dictionary
-                response['image_data'] = image_data
+                response['image_data'] = f"data:{mime_type};base64,{image_data}"
     
     else:
         status = 404

@@ -6,25 +6,14 @@ from .models import BlockedToken
 # Decorator to check JWT token validity without using functools.wraps
 def jwt_required(view_func):
     def _wrapped_view(request, *args, **kwargs):
-        # Extract JWT token from the Authorization header
-        auth_header = request.headers.get('Authorization')
+        # Extract JWT token from HttpOnly cookie
+        token = request.COOKIES.get('jwt_token')
 
-        if not auth_header:
+        if not token:
             return JsonResponse({
                 'status_code': 400,
-                'message': 'Bad Request [Authorization token is required]'
+                'message': 'Bad Request [Authorization token in HttpOnly cookie is required]'
             }, status=400)
-
-        # Token should be in the form "Bearer <token>"
-        parts = auth_header.split()
-
-        if len(parts) != 2 or parts[0].lower() != 'bearer':
-            return JsonResponse({
-                'status_code': 400,
-                'message': 'Bad Request [Authorization token must be in the form "Bearer <token>"]'
-            }, status=400)
-
-        token = parts[1]
 
         # Looking into database if token is saved in BlockedToken token
         token_inBlocked = list(BlockedToken.objects.filter(value=token))
