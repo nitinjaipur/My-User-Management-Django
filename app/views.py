@@ -3,7 +3,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import make_password, check_password
 import json
 from .models import AppUser, BlockedToken
-from .jwt_utils import generate_jwt_token
+from .jwt_utils import generate_jwt_token, decode_jwt_token
 import jwt
 import datetime
 from .decorators import jwt_required
@@ -196,31 +196,34 @@ def logout(request):
                 'status_code': 400,
                 'message': 'Bad Request [No Authorization token in HttpOnly cookie]'
             }
-        # If it do not have have token and bearer
-        expire_time = datetime.datetime.utcnow().timestamp()
-        expire_time = datetime.datetime.utcfromtimestamp(expire_time)
-        try:
-            blockedToken = BlockedToken.objects.create(value=token, expire_time=expire_time)
-            blockedToken.save()
-            status = 200
-            response = {
-                'status_code': 200,
-                'message': 'Logout successfull'
-            }
-        # Exception if token expired
-        except jwt.ExpiredSignatureError:
-            status = 401
-            response = {
-                'status_code': 401,
-                'message': 'Unauthorized [Token has expired]'
-            }
-        # Exception if token invalid
-        except jwt.InvalidTokenError:
-            status = 401
-            response = {
-                'status_code': 401,
-                'message': 'Unauthorized [Invalid token]'
-            }
+        # If it do have have token and bearer
+        else:
+            expire_time = datetime.datetime.utcnow().timestamp()
+            expire_time = datetime.datetime.utcfromtimestamp(expire_time)
+            try:
+                user = decode_jwt_token(token)
+                user = AppUser.objects.filter(id=user['user_id']).first()
+                blockedToken = BlockedToken.objects.create(user=user, value=token, expire_time=expire_time)
+                blockedToken.save()
+                status = 200
+                response = {
+                    'status_code': 200,
+                    'message': 'Logout successfull'
+                }
+            # Exception if token expired
+            except jwt.ExpiredSignatureError:
+                status = 401
+                response = {
+                    'status_code': 401,
+                    'message': 'Unauthorized [Token has expired]'
+                }
+            # Exception if token invalid
+            except jwt.InvalidTokenError:
+                status = 401
+                response = {
+                    'status_code': 401,
+                    'message': 'Unauthorized [Invalid token]'
+                }
 
     # If method is not POST than returning error
     else:
@@ -239,18 +242,59 @@ def logout(request):
 
 @jwt_required
 def get_user_details(request):
-    # Extracting user from request (setted by jwt_required decorator)
-    user = request.user
-    # Query to get App user from database
-    user = AppUser.objects.filter(id=user['user_id']).first()
-    if user:
-        status = 200
-        response = fetch_user_details(user)
+    if request.method == 'GET':
+        # Extracting user from request (setted by jwt_required decorator)
+        user_request = request.user
+        # Query to get App user from database
+        user = AppUser.objects.filter(id=user_request['user_id']).first()
+        if user:
+            status = 200
+            response = fetch_user_details(user)
+        else:
+            status = 404
+            response = {
+                'status_code': 404,
+                'message': 'User not found'
+            }
     else:
-        status = 404
+        status = 405
         response = {
-            'status_code': 404,
-            'message': 'User not found'
+            'status_code': 405,
+            'message': 'Method Not Allowed'
         }
-
     return JsonResponse(response, status=status, safe=False)
+
+@jwt_required
+def delete_current_user(request):
+    if request.method == 'DELETE':
+        print('------1------')
+        user_request = request.user
+        user = AppUser.objects.filter(id=user_request['user_id']).first()
+        if user:
+            user.blocked_tokens.all().delete()
+            user.delete()
+            status = 200
+            response = {
+                'status_code': 200,
+                'message': 'User deletd successfully'
+            }
+            response = JsonResponse(response, status=status, safe=False)
+            # response.delete_cookie('jwt_token', path='/')
+            response.delete_cookie('jwt_token', path='/')
+            # response.delete_cookie('csrftoken', path='/')
+            response.delete_cookie('csrftoken', path='/')
+            return response
+        else:
+            status = 404
+            response = {
+                'status_code': 404,
+                'message': 'User not found'
+            }
+    else:
+        status = 405
+        response = {
+            'status_code': 405,
+            'message': 'Method Not Allowed'
+        }
+    response = JsonResponse(response, status=status, safe=False)
+    return response

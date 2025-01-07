@@ -134,8 +134,13 @@ APPEND_SLASH = False
 JWT_SECRET_KEY = 'your-secret-key-here'
 
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',  # React development server
+    'http://localhost:3000',
     'http://127.0.0.1:3000'
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000'   
+]
