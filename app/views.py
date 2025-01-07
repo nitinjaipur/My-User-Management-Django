@@ -10,6 +10,7 @@ from django.conf import settings
 from .decorators import jwt_required
 import base64
 from .utils import IMG_TYPE
+from django.middleware.csrf import get_token
 
 # View for User Register
 @csrf_exempt
@@ -84,6 +85,17 @@ def register(request):
             httponly=True,  # Ensures that the cookie is inaccessible to JavaScript
             secure=True,    # Only send cookie over HTTPS (ensure your site uses HTTPS)
             samesite='Strict',  # Prevent CSRF by limiting cross-site requests
+            expires=expires  # Set the expiration time
+        )
+
+        # Generate a CSRF token and set it in a cookie
+        csrf_token = get_token(request)
+        response.set_cookie(
+            key='csrftoken',
+            value=csrf_token,
+            httponly=False,  # Allow JavaScript to access the cookie for client-side handling
+            secure=True,     # Only send cookie over HTTPS
+            samesite='Strict',  # Prevent cross-site requests
             expires=expires  # Set the expiration time
         )
     
@@ -179,6 +191,17 @@ def login(request):
             samesite='Strict',  # Prevent CSRF by limiting cross-site requests
             expires=expires  # Set the expiration time
         )
+
+        # Generate a CSRF token and set it in a cookie
+        csrf_token = get_token(request)
+        response.set_cookie(
+            key='csrftoken',
+            value=csrf_token,
+            httponly=False,  # Allow JavaScript to access the cookie for client-side handling
+            secure=True,     # Only send cookie over HTTPS
+            samesite='Strict',  # Prevent cross-site requests
+            expires=expires  # Set the expiration time
+        )
     
     return response
 
@@ -236,10 +259,10 @@ def logout(request):
     response = JsonResponse(response, status=status, safe=False)
     if status != 405:
         response.delete_cookie('jwt_token', path='/')
+        response.delete_cookie('csrftoken', path='/')
     return response
 
 
-@csrf_exempt
 @jwt_required
 def get_user_details(request):
     # Extracting user from request (setted by jwt_required decorator)
