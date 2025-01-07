@@ -267,7 +267,6 @@ def get_user_details(request):
 @jwt_required
 def delete_current_user(request):
     if request.method == 'DELETE':
-        print('------1------')
         user_request = request.user
         user = AppUser.objects.filter(id=user_request['user_id']).first()
         if user:
