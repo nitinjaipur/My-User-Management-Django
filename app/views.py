@@ -3,13 +3,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import make_password, check_password
 import json
 from .models import AppUser, BlockedToken
-from .jwt_utils import generate_jwt_token, decode_jwt_token
+from .jwt_utils import generate_jwt_token
 import jwt
 import datetime
-from django.conf import settings
 from .decorators import jwt_required
-import base64
-from .utils import IMG_TYPE
+from .utils import fetch_user_details
 from django.middleware.csrf import get_token
 
 # View for User Register
@@ -43,16 +41,15 @@ def register(request):
                 user = AppUser.objects.create(name=name, email=email, password=password, age=age, gender=gender, profileImg=image)
                 # Saving AppUser instance to database
                 user.save()
-
                 # Generating jwt token
                 token = generate_jwt_token(user)
-
                 # Crating response
                 status = 201
+                user_details = fetch_user_details(user)
                 response = {
                     'status_code': 201,
                     'message': 'User Created',
-                    'token': token
+                    'data': user_details
                 }
 
             #In case of any exception happened handling it
@@ -74,8 +71,6 @@ def register(request):
         }
     
     # Returning JsonResponse
-    # return JsonResponse(response, status=status, safe=False)
-
     response = JsonResponse(response, status=status, safe=False)
     if status == 201:
         expires = datetime.datetime.utcnow() + datetime.timedelta(days=1)  # Token expires in 1 day
@@ -136,25 +131,7 @@ def login(request):
             else:
                 # If user password (after unhashing) and api password matches
                 if check_password(password, user.password):
-                    user_details = {
-                        'id': user.id,
-                        'name': user.name,
-                        'email': user.email,
-                        'age': user.age,
-                        'gender': user.gender
-                    }
-                    if user.profileImg:
-                        # Getting image type from image path
-                        profileImgType = (user.profileImg.path).split('.')[-1]
-                        # Getting mime type from image type
-                        mime_type = IMG_TYPE.get(profileImgType)
-                        image_path = user.profileImg.path
-                        with open(image_path, 'rb') as img_file:
-                            # Encode the image to base64
-                            image_data = base64.b64encode(img_file.read()).decode('utf-8')
-                            # Add the image data to the user data dictionary
-                            user_details['image_data'] = f"data:{mime_type};base64,{image_data}"
-
+                    user_details = fetch_user_details(user)
                     token = generate_jwt_token(user)
                     status = 200
                     response = {
@@ -179,7 +156,6 @@ def login(request):
         }
     
     # Returning JsonResponse
-    # return JsonResponse(response, status=status, safe=False)
     response = JsonResponse(response, status=status, safe=False)
     if status == 200:
         expires = datetime.datetime.utcnow() + datetime.timedelta(days=1)  # Token expires in 1 day
@@ -226,7 +202,6 @@ def logout(request):
         try:
             blockedToken = BlockedToken.objects.create(value=token, expire_time=expire_time)
             blockedToken.save()
-
             status = 200
             response = {
                 'status_code': 200,
@@ -255,7 +230,6 @@ def logout(request):
             'message': 'Method Not Allowed'
         }
     # Returning JsonResponse
-    # return JsonResponse(response, status=status, safe=False)
     response = JsonResponse(response, status=status, safe=False)
     if status != 405:
         response.delete_cookie('jwt_token', path='/')
@@ -269,29 +243,9 @@ def get_user_details(request):
     user = request.user
     # Query to get App user from database
     user = AppUser.objects.filter(id=user['user_id']).first()
-
     if user:
         status = 200
-        response = {
-            'name': user.name,
-            'email': user.email,
-            'age': user.age,
-            'gender': user.gender
-        }
-
-        if user.profileImg:
-            # Getting image type from image path
-            profileImgType = (user.profileImg.path).split('.')[-1]
-            # Getting mime type from image type
-            mime_type = IMG_TYPE.get(profileImgType)
-            # Converting image to base64 so can be sent in json response
-            image_path = user.profileImg.path
-            with open(image_path, 'rb') as img_file:
-                # Encode the image to base64
-                image_data = base64.b64encode(img_file.read()).decode('utf-8')
-                # Add the image data to the user data dictionary
-                response['image_data'] = f"data:{mime_type};base64,{image_data}"
-    
+        response = fetch_user_details(user)
     else:
         status = 404
         response = {
