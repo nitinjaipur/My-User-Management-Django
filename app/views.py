@@ -267,20 +267,26 @@ def get_user_details(request):
 @jwt_required
 def delete_current_user(request):
     if request.method == 'DELETE':
+        # Extracting user from request
         user_request = request.user
+        # Query to get App user from database
         user = AppUser.objects.filter(id=user_request['user_id']).first()
         if user:
+            # Deleting all BlockedToken from database related to this user
             user.blocked_tokens.all().delete()
+            # Deleting user from database
             user.delete()
+            # Setting status
             status = 200
+            # Creating response data
             response = {
                 'status_code': 200,
                 'message': 'User deletd successfully'
             }
+            # Creating response object
             response = JsonResponse(response, status=status, safe=False)
-            # response.delete_cookie('jwt_token', path='/')
+            # Deleting all the cookies from client side
             response.delete_cookie('jwt_token', path='/')
-            # response.delete_cookie('csrftoken', path='/')
             response.delete_cookie('csrftoken', path='/')
             return response
         else:
@@ -296,4 +302,57 @@ def delete_current_user(request):
             'message': 'Method Not Allowed'
         }
     response = JsonResponse(response, status=status, safe=False)
+    return response
+
+
+@jwt_required
+def update_user(request):
+    if request.method == 'PUT':
+        # Extracting user from request
+        user_request = request.user
+        # Query to get App user from database
+        user = AppUser.objects.filter(id=user_request['user_id']).first()
+        if user:
+            # Extracting data from request body
+            data = json.loads(request.body)
+            # Setting data to user object
+            user.name = data.get('name') or user.name
+            user.email = data.get('email') or user.email
+            user.age = data.get('age') or user.age
+            user.gender = data.get('gender') or user.gender
+            # Saving user object to database
+            user.save()
+            # Setting status
+            status = 200
+            # Creating user details dictionary
+            user_details = fetch_user_details(user)
+            # Creating response data
+            response = {
+                'status_code': 200,
+                'message': 'User updated successfully',
+                'data': user_details
+            }
+
+    else:
+        status = 405
+        response = {
+            'status_code': 405,
+            'message': 'Method Not Allowed'
+        }
+    # Creating response object
+    response = JsonResponse(response, status=status, safe=False)
+
+    if status == 200:
+        # Updating jwt token with new details
+        token = generate_jwt_token(user)
+        expires = datetime.datetime.utcnow() + datetime.timedelta(days=1)  # Token expires in 1 day
+        response.set_cookie(
+            key='jwt_token',
+            value=token,
+            httponly=True,  # Ensures that the cookie is inaccessible to JavaScript
+            secure=True,    # Only send cookie over HTTPS (ensure your site uses HTTPS)
+            samesite='Strict',  # Prevent CSRF by limiting cross-site requests
+            expires=expires  # Set the expiration time
+        )
+
     return response
