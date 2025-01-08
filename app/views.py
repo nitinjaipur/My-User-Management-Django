@@ -9,6 +9,7 @@ import datetime
 from .decorators import jwt_required
 from .utils import fetch_user_details
 from django.middleware.csrf import get_token
+from django.core.files.storage import default_storage
 
 # View for User Register
 @csrf_exempt
@@ -307,7 +308,7 @@ def delete_current_user(request):
 
 @jwt_required
 def update_user(request):
-    if request.method == 'PUT':
+    if request.method == 'PATCH':
         # Extracting user from request
         user_request = request.user
         # Query to get App user from database
@@ -315,6 +316,8 @@ def update_user(request):
         if user:
             # Extracting data from request body
             data = json.loads(request.body)
+            # Storing old email
+            old_email = user.email
             # Setting data to user object
             user.name = data.get('name') or user.name
             user.email = data.get('email') or user.email
@@ -341,9 +344,8 @@ def update_user(request):
         }
     # Creating response object
     response = JsonResponse(response, status=status, safe=False)
-
-    if status == 200:
-        # Updating jwt token with new details
+    # Updating jwt token with new details if email is updated
+    if status == 200 and old_email != user.email:
         token = generate_jwt_token(user)
         expires = datetime.datetime.utcnow() + datetime.timedelta(days=1)  # Token expires in 1 day
         response.set_cookie(
@@ -355,4 +357,39 @@ def update_user(request):
             expires=expires  # Set the expiration time
         )
 
+    return response
+
+@jwt_required
+def update_user_image(request):
+    if request.method == 'POST':
+        # Extracting user from request
+        user_request = request.user
+        # Query to get App user from database
+        user = AppUser.objects.filter(id=user_request['user_id']).first()
+        if user:
+            # Check if the user already has an image
+            if user.profileImg:
+                # Delete the old image from the storage folder
+                default_storage.delete(user.profileImg.path)
+            # Save the new image to the storage folder
+            user.profileImg = request.FILES.get('image')
+            # Save the user object to the database
+            user.save()
+            # Setting status
+            status = 200
+            # Creating user details dictionary
+            user_details = fetch_user_details(user)
+            # Creating response data
+            response = {
+                'status_code': 200,
+                'message': 'User updated successfully',
+                'data': user_details
+            }
+    else:
+        status = 405
+        response = {
+            'status_code': 405,
+            'message': 'Method Not Allowed'
+        }
+    response = JsonResponse(response, status=status, safe=False)
     return response
