@@ -275,6 +275,10 @@ def delete_current_user(request):
         if user:
             # Deleting all BlockedToken from database related to this user
             user.blocked_tokens.all().delete()
+            # Check if the user has an image
+            if user.profileImg:
+                # Delete the image from the storage folder
+                default_storage.delete(user.profileImg.path)
             # Deleting user from database
             user.delete()
             # Setting status
