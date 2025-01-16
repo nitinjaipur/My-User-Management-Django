@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from os import getenv
 import sys
 from pathlib import Path
+import environ
 from app.utils import load_env_file
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -29,6 +30,10 @@ elif environment == 'development':
     load_env_file(BASE_DIR / '.env.dev')
 else:
     load_env_file(BASE_DIR / '.env.dev')
+
+# Initialise environment variables
+env = environ.Env()
+environ.Env.read_env()
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -90,11 +95,16 @@ WSGI_APPLICATION = 'userManagementBackend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
+# DATABASE CONFIGURATION
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': env.db()
 }
 
 
