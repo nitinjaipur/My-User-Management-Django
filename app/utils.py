@@ -1,4 +1,21 @@
 import base64
+import os
+
+def load_env_file(env_file_path):
+    """
+    Loads environment variables from a .env file into the OS environment.
+
+    :param env_file_path: The path to the .env file
+    """
+    with open(env_file_path) as f:
+        for line in f:
+            # Ignore empty lines and comments (lines starting with '#')
+            line = line.strip()
+            if line and not line.startswith('#'):
+                # Split the line into key and value, and set the environment variable
+                key, value = line.split('=', 1)
+                os.environ[key] = value
+
 
 IMG_TYPE = {
     'jpg': 'image/jpeg',

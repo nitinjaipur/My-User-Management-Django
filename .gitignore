@@ -62,3 +62,8 @@ htmlcov/
 /static/
 
 /media/
+
+# misc
+.env
+.env.dev
+.env.prod

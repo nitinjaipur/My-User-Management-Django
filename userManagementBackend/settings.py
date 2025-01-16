@@ -9,23 +9,37 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-
+from os import getenv
+import sys
 from pathlib import Path
+from app.utils import load_env_file
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Check if we have a custom environment set from the command line argument
+environment = getenv('ENV', 'development')
+if '--env' in sys.argv:
+    environment = sys.argv[sys.argv.index('--env') + 1]
+
+# Load environment variables from the .env file based on the environment
+if environment == 'production':
+    load_env_file(BASE_DIR / '.env.prod')
+elif environment == 'development':
+    load_env_file(BASE_DIR / '.env.dev')
+else:
+    load_env_file(BASE_DIR / '.env.dev')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-j@d98=ua1mnyb!73v6(%4^)rai0pzrngc31ri#@ds*wnj15vyy'
+SECRET_KEY = getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = getenv('DEBUG')
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '::1', 'http://127.0.0.1:3000/']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '::1', 'http://127.0.0.1:3000/', 'https://user-react-app-xi.vercel.app/']
 
 
 # Application definition
@@ -131,16 +145,18 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 APPEND_SLASH = False
 
-JWT_SECRET_KEY = 'your-secret-key-here'
+JWT_SECRET_KEY = getenv('JWT_SECRET_KEY')
 
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
-    'http://127.0.0.1:3000'
+    'http://127.0.0.1:3000',
+    'https://user-react-app-xi.vercel.app'
 ]
 
 CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:3000',
-    'http://127.0.0.1:3000'   
+    'http://127.0.0.1:3000',
+    'https://user-react-app-xi.vercel.app'
 ]
