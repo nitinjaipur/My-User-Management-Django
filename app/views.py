@@ -53,7 +53,7 @@ def register(request):
                     'data': user_details
                 }
 
-            #In case of any exception happened handling it
+            # In case of any exception happened handling it
             except Exception as e:
                 # Crating response
                 status = 400
@@ -89,7 +89,7 @@ def register(request):
         response.set_cookie(
             key='csrftoken',
             value=csrf_token,
-            httponly=False,  # Allow JavaScript to access the cookie for client-side handling
+            httponly=True,  # Ensures that the cookie is inaccessible to JavaScript
             secure=True,     # Only send cookie over HTTPS
             samesite='Strict',  # Prevent cross-site requests
             expires=expires  # Set the expiration time
@@ -174,7 +174,7 @@ def login(request):
         response.set_cookie(
             key='csrftoken',
             value=csrf_token,
-            httponly=False,  # Allow JavaScript to access the cookie for client-side handling
+            httponly=True,  # Ensures that the cookie is inaccessible to JavaScript
             secure=True,     # Only send cookie over HTTPS
             samesite='Strict',  # Prevent cross-site requests
             expires=expires  # Set the expiration time
