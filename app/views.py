@@ -89,7 +89,7 @@ def register(request):
         response.set_cookie(
             key='csrftoken',
             value=csrf_token,
-            httponly=True,  # Ensures that the cookie is inaccessible to JavaScript
+            httponly=False,  # Making it accessible to JavaScript for CSRF protection
             secure=True,     # Only send cookie over HTTPS
             samesite='Strict',  # Prevent cross-site requests
             expires=expires  # Set the expiration time
@@ -174,7 +174,7 @@ def login(request):
         response.set_cookie(
             key='csrftoken',
             value=csrf_token,
-            httponly=True,  # Ensures that the cookie is inaccessible to JavaScript
+            httponly=False,  # Making it accessible to JavaScript for CSRF protection
             secure=True,     # Only send cookie over HTTPS
             samesite='Strict',  # Prevent cross-site requests
             expires=expires  # Set the expiration time
