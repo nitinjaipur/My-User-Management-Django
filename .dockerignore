@@ -13,7 +13,7 @@ env/
 *.local
 
 # Ignore database files (if you're using SQLite locally)
-*.db
+# *.db
 
 # Ignore log files
 *.log

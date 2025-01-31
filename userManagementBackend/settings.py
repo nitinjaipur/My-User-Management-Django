@@ -32,7 +32,6 @@ else:
     load_env_file(BASE_DIR / '.env.dev')
 
 # Initialise environment variables
-env = environ.Env()
 environ.Env.read_env()
 
 # Quick-start development settings - unsuitable for production
@@ -104,7 +103,10 @@ WSGI_APPLICATION = 'userManagementBackend.wsgi.application'
 
 # DATABASE CONFIGURATION
 DATABASES = {
-    'default': env.db()
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
 
 
